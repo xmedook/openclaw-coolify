@@ -10,6 +10,12 @@ echo "🦞 Building OpenClaw Sandbox Browser Image..."
 BASE_IMAGE="mcr.microsoft.com/playwright:v1.41.0-jammy"
 TARGET_IMAGE="openclaw-sandbox-browser:bookworm-slim"
 
+# Check if image already exists
+if docker image inspect "$TARGET_IMAGE" >/dev/null 2>&1; then
+    echo "✅ Sandbox browser image already exists: $TARGET_IMAGE"
+    exit 0
+fi
+
 echo "   Pulling $BASE_IMAGE..."
 docker pull "$BASE_IMAGE"
 

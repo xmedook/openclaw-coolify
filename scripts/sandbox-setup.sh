@@ -10,6 +10,12 @@ echo "🦞 Building OpenClaw Sandbox Base Image..."
 BASE_IMAGE="python:3.11-slim-bookworm"
 TARGET_IMAGE="openclaw-sandbox:bookworm-slim"
 
+# Check if image already exists
+if docker image inspect "$TARGET_IMAGE" >/dev/null 2>&1; then
+    echo "✅ Sandbox base image already exists: $TARGET_IMAGE"
+    exit 0
+fi
+
 echo "   Pulling $BASE_IMAGE..."
 docker pull "$BASE_IMAGE"
 

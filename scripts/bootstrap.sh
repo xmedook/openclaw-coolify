@@ -436,12 +436,12 @@ seed_agent "dbadmin" "DB Administrator"
 # Export state directory for the binary
 export OPENCLAW_STATE_DIR="$OPENCLAW_STATE"
 
-# Trigger sandbox image setup (async to speed up boot)
+# Trigger sandbox image setup (ensure they are ready before doctor)
 if [ -f "scripts/sandbox-setup.sh" ]; then
-    bash scripts/sandbox-setup.sh > /var/log/sandbox_setup.log 2>&1 &
+    bash scripts/sandbox-setup.sh
 fi
 if [ -f "scripts/sandbox-browser-setup.sh" ]; then
-    bash scripts/sandbox-browser-setup.sh > /var/log/sandbox_browser_setup.log 2>&1 &
+    bash scripts/sandbox-browser-setup.sh
 fi
 
 # Resolve public URL (Coolify injects SERVICE_FQDN_OPENCLAW)
