@@ -78,10 +78,7 @@ services:
     volumes:
       - openclaw-config:/root/.openclaw
       - openclaw-workspace:/root/openclaw-workspace
-      # - openclaw-linkding:/root/openclaw-linkding
-      - openclaw-dbadmin:/root/openclaw-dbadmin
-      # Mount SearXNG setting to auto-generate secret
-      - ./searxng:/app/searxng
+
 
       # Secure: Socket mount removed in favor of proxy
       # - /var/run/docker.sock:/var/run/docker.sock
@@ -171,9 +168,8 @@ services:
 volumes:
   openclaw-config:
   openclaw-workspace:
-  openclaw-linkding:
-  openclaw-dbadmin:
   searxng-data:
+
   registry-data:
 #  qdrant-data:
 #  linkding-data:
