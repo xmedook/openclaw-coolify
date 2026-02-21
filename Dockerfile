@@ -74,6 +74,9 @@ RUN --mount=type=cache,target=/data/.bun/install/cache \
     bun pm -g untrusted && \
     bun install -g @openai/codex @google/gemini-cli opencode-ai @steipete/summarize @hyperbrowser/agent clawhub
 
+# Ensure global npm bin is in PATH
+ENV PATH="/usr/local/bin:/usr/local/lib/node_modules/.bin:${PATH}"
+
 # OpenClaw (npm install)
 RUN --mount=type=cache,target=/data/.npm \
     if [ "$OPENCLAW_BETA" = "true" ]; then \
