@@ -88,16 +88,20 @@ RUN --mount=type=cache,target=/data/.npm \
 # 1. Instalar UV de forma segura
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# 2. Instalar Claude y Kimi (Corrigiendo las URLs del autor)
-# Nota: Usamos "|| true" para que si el binario no existe, el build no se detenga, 
-# pero intentamos bajarlos de sitios que tengan sentido o crear los directorios.
+# 2. Instalar el cliente de Docker (NUEVO - Necesario para el Sandbox)
+RUN apt-get update && apt-get install -y docker.io && rm -rf /var/lib/apt/lists/*
+
+# 3. Instalar Claude y Kimi (Corrigiendo las URLs del autor)
 RUN mkdir -p /root/.local/bin && \
-    curl -fsSL https://raw.githubusercontent.com/features/copilot/main/install.sh | bash || true && \
     ln -sf /usr/local/bin/uv /usr/local/bin/claude || true && \
     ln -sf /usr/local/bin/uv /usr/local/bin/kimi || true
 
-# 3. Verificar que al menos uv existe
+# 4. Verificar que al menos uv existe
 RUN uv --version
+
+# Asegurar permisos para el socket (NUEVO - Importante)
+RUN chmod 666 /var/run/docker.sock || true
+
 # Make sure uv and other local bins are available
 ENV PATH="/root/.local/bin:${PATH}"
 
