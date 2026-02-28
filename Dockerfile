@@ -91,22 +91,27 @@ RUN --mount=type=cache,target=/data/.npm \
 # 1. Instalar UV de forma segura
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# Eliminamos cualquier configuración de proxy que el script intente forzar
-RUN unset DOCKER_HOST && export DOCKER_HOST="unix:///var/run/docker.sock"
+# 2. Instalar el cliente de DOCKER OFICIAL (Actualizado)
+RUN apt-get update && apt-get install -y ca-certificates curl gnupg && \
+    install -m 0755 -d /etc/apt/keyrings && \
+    curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg && \
+    chmod a+r /etc/apt/keyrings/docker.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+    tee /etc/apt/sources.list.d/docker.list > /dev/null && \
+    apt-get update && apt-get install -y docker-ce-cli && \
+    rm -rf /var/lib/apt/lists/*
 
-# 2. Instalar el cliente de Docker (NUEVO - Necesario para el Sandbox)
-RUN apt-get update && apt-get install -y docker.io && rm -rf /var/lib/apt/lists/*
+# 3. Forzar comunicación por socket y versión de API
+ENV DOCKER_HOST="unix:///var/run/docker.sock"
+ENV DOCKER_API_VERSION="1.44"
 
-# 3. Instalar Claude y Kimi (Corrigiendo las URLs del autor)
+# 4. Instalar Claude y Kimi (Symlinks)
 RUN mkdir -p /root/.local/bin && \
     ln -sf /usr/local/bin/uv /usr/local/bin/claude || true && \
     ln -sf /usr/local/bin/uv /usr/local/bin/kimi || true
 
-# 4. Verificar que al menos uv existe
-RUN uv --version
-
-# Asegurar permisos para el socket (NUEVO - Importante)
-RUN chmod 666 /var/run/docker.sock || true
+# 5. Permisos y verificación
+RUN chmod 666 /var/run/docker.sock || true && uv --version
 
 # Make sure uv and other local bins are available
 ENV PATH="/root/.local/bin:${PATH}"
