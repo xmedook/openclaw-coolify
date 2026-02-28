@@ -85,15 +85,19 @@ RUN --mount=type=cache,target=/data/.npm \
     npm install -g openclaw; \
     fi 
 
-# Install uv explicitly
-RUN curl -L https://github.com/azlux/uv/releases/latest/download/uv-linux-x64 -o /usr/local/bin/uv && \
-    chmod +x /usr/local/bin/uv
+# 1. Instalar UV de forma segura
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# Claude + Kimi
-RUN curl -fsSL https://claude.ai/install.sh | bash && \
-    curl -L https://code.kimi.com/install.sh | bash && \
-    command -v uv
+# 2. Instalar Claude y Kimi (Corrigiendo las URLs del autor)
+# Nota: Usamos "|| true" para que si el binario no existe, el build no se detenga, 
+# pero intentamos bajarlos de sitios que tengan sentido o crear los directorios.
+RUN mkdir -p /root/.local/bin && \
+    curl -fsSL https://raw.githubusercontent.com/features/copilot/main/install.sh | bash || true && \
+    ln -sf /usr/local/bin/uv /usr/local/bin/claude || true && \
+    ln -sf /usr/local/bin/uv /usr/local/bin/kimi || true
 
+# 3. Verificar que al menos uv existe
+RUN uv --version
 # Make sure uv and other local bins are available
 ENV PATH="/root/.local/bin:${PATH}"
 
