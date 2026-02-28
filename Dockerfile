@@ -77,6 +77,9 @@ RUN --mount=type=cache,target=/data/.bun/install/cache \
 # Ensure global npm bin is in PATH
 ENV PATH="/usr/local/bin:/usr/local/lib/node_modules/.bin:${PATH}"
 
+# Forzamos el uso del socket local y anulamos el proxy de red
+ENV DOCKER_HOST="unix:///var/run/docker.sock"
+
 # OpenClaw (npm install)
 RUN --mount=type=cache,target=/data/.npm \
     if [ "$OPENCLAW_BETA" = "true" ]; then \
@@ -87,6 +90,9 @@ RUN --mount=type=cache,target=/data/.npm \
 
 # 1. Instalar UV de forma segura
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# Eliminamos cualquier configuración de proxy que el script intente forzar
+RUN unset DOCKER_HOST && export DOCKER_HOST="unix:///var/run/docker.sock"
 
 # 2. Instalar el cliente de Docker (NUEVO - Necesario para el Sandbox)
 RUN apt-get update && apt-get install -y docker.io && rm -rf /var/lib/apt/lists/*
