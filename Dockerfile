@@ -68,13 +68,7 @@ ENV OPENCLAW_BETA=${OPENCLAW_BETA} \
     OPENCLAW_NO_ONBOARD=1 \
     NPM_CONFIG_UNSAFE_PERM=true
 
-# Bun global installs
-RUN --mount=type=cache,target=/data/.bun/install/cache \
-    bun install -g vercel @marp-team/marp-cli https://github.com/tobi/qmd && \
-    bun pm -g untrusted && \
-    bun install -g @openai/codex @google/gemini-cli opencode-ai @steipete/summarize @hyperbrowser/agent clawhub
-
-# 🛠️ INSTALACIÓN DE DOCKER OFICIAL (Para evitar error de versión API 1.44)
+# 🛠️ INSTALACIÓN DE DOCKER OFICIAL (Para API 1.44)
 RUN install -m 0755 -d /etc/apt/keyrings && \
     curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg && \
     chmod a+r /etc/apt/keyrings/docker.gpg && \
@@ -86,13 +80,17 @@ RUN install -m 0755 -d /etc/apt/keyrings && \
 # 🛠️ INSTALACIÓN DE UV
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# OpenClaw (npm install global)
+# Instalar OpenClaw Globalmente
 RUN --mount=type=cache,target=/data/.npm \
     if [ "$OPENCLAW_BETA" = "true" ]; then \
     npm install -g openclaw@beta; \
     else \
     npm install -g openclaw; \
     fi 
+
+# 🛠️ SYM-LINK UV PARA CLAUDE/KIMI
+RUN ln -sf /usr/local/bin/uv /usr/local/bin/claude || true && \
+    ln -sf /usr/local/bin/uv /usr/local/bin/kimi || true
 
 ########################################
 # Stage 4: Final
@@ -102,21 +100,22 @@ FROM dependencies AS final
 WORKDIR /app
 COPY . .
 
-# 🛠️ FIX BINARIOS Y SYMLINKS (Para evitar error 'openclaw: not found')
-# Enlazamos los binarios de npm global a /usr/local/bin para que bootstrap.sh los vea
-RUN ln -sf /usr/local/lib/node_modules/openclaw/bin/openclaw /usr/local/bin/openclaw || \
-    ln -sf $(which openclaw) /usr/local/bin/openclaw || true && \
-    ln -sf /usr/local/bin/openclaw /usr/local/bin/openclaw-approve || true && \
-    ln -sf /data/.claude/bin/claude /usr/local/bin/claude || true && \
-    ln -sf /data/.kimi/bin/kimi /usr/local/bin/kimi || true && \
+# 🛠️ SOLUCIÓN MAESTRA PARA "OPENCLAW NOT FOUND"
+# Buscamos el binario donde sea que npm lo haya escondido y lo ponemos en el PATH global
+RUN OPENCLAW_PATH=$(find /usr/local/lib/node_modules/openclaw -name openclaw -type f -executable | head -n 1) || \
+    OPENCLAW_PATH=$(which openclaw) && \
+    if [ -n "$OPENCLAW_PATH" ]; then \
+        ln -sf "$OPENCLAW_PATH" /usr/local/bin/openclaw; \
+        ln -sf "$(dirname $OPENCLAW_PATH)/openclaw-approve" /usr/local/bin/openclaw-approve || true; \
+    fi && \
     chmod +x /app/scripts/*.sh
 
-# 🛠️ CONFIGURACIÓN DE ENTORNO CRÍTICA
+# Variables de entorno críticas para Docker y Binarios
 ENV DOCKER_HOST="unix:///var/run/docker.sock"
 ENV DOCKER_API_VERSION="1.44"
-ENV PATH="/usr/local/bin:/usr/local/lib/node_modules/.bin:/root/.local/bin:/data/.bun/bin:$PATH"
+ENV PATH="/usr/local/bin:/usr/local/lib/node_modules/openclaw/bin:/root/.local/bin:/data/.bun/bin:${PATH}"
 
 EXPOSE 18789
 
-# Aseguramos permisos del socket justo antes de arrancar (vía bootstrap o manual)
-CMD ["bash", "/app/scripts/bootstrap.sh"]
+# Comando de arranque con auto-reparación de PATH
+CMD ["bash", "-c", "ln -sf $(which openclaw) /usr/local/bin/openclaw || true; bash /app/scripts/bootstrap.sh"]
