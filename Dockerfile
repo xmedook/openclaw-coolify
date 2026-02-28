@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Stage 2: Runtimes & Docker CLI
 ########################################
 FROM base AS runtimes
-# Instalación de Docker CLI oficial
+# Instalación de Docker CLI oficial (API 1.44)
 RUN install -m 0755 -d /etc/apt/keyrings && \
     curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg && \
     chmod a+r /etc/apt/keyrings/docker.gpg && \
@@ -35,10 +35,14 @@ FROM runtimes AS final
 WORKDIR /app
 COPY . .
 
-# Instalamos OpenClaw usando BUN (más fiable en las rutas)
+# Instalamos OpenClaw usando BUN
 RUN bun install -g openclaw
 
-# Forzamos los enlaces simbólicos donde el script bootstrap espera verlos
+# --- FIX DE PERMISOS PARA /data ---
+# Creamos la carpeta de datos y aseguramos que sea escribible
+RUN mkdir -p /data && chmod -R 777 /data
+
+# Forzamos los enlaces simbólicos
 RUN ln -sf /root/.bun/bin/openclaw /usr/local/bin/openclaw && \
     ln -sf /root/.bun/bin/openclaw-approve /usr/local/bin/openclaw-approve && \
     chmod +x /app/scripts/*.sh
@@ -46,9 +50,10 @@ RUN ln -sf /root/.bun/bin/openclaw /usr/local/bin/openclaw && \
 # Variables de entorno críticas
 ENV DOCKER_HOST="unix:///var/run/docker.sock"
 ENV DOCKER_API_VERSION="1.44"
+ENV OPENCLAW_DATA_DIR="/data"
 ENV PATH="/root/.bun/bin:/usr/local/bin:/usr/bin:/bin:${PATH}"
 
 EXPOSE 18789
 
-# El comando de arranque: Verificamos si existe el comando antes de lanzar bootstrap
-CMD ["bash", "-c", "which openclaw || ln -sf /root/.bun/bin/openclaw /usr/local/bin/openclaw; bash /app/scripts/bootstrap.sh"]
+# Comando de arranque: se asegura de que /data sea escribible antes de iniciar
+CMD ["bash", "-c", "chmod -R 777 /data || true; bash /app/scripts/bootstrap.sh"]
