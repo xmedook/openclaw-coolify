@@ -113,8 +113,11 @@ RUN mkdir -p /root/.local/bin && \
 # 5. Permisos y verificación
 RUN chmod 666 /var/run/docker.sock || true && uv --version
 
-# Make sure uv and other local bins are available
-ENV PATH="/root/.local/bin:${PATH}"
+# Aseguramos que los binarios globales de npm/bun sean visibles
+ENV PATH="/usr/local/bin:/root/.local/bin:/app/node_modules/.bin:${PATH}"
+
+# Forzamos un link simbólico si el comando sigue sin aparecer
+RUN ln -sf /app/node_modules/.bin/openclaw /usr/local/bin/openclaw || true
 
 ########################################
 # Stage 4: Final
