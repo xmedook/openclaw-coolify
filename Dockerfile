@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:1
 
 ########################################
-# Stage 1: Base System
+# Stage 1: Base System (ACTUALIZADO A NODE 22)
 ########################################
-FROM node:20-bookworm-slim AS base
+FROM node:22-bookworm-slim AS base
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl wget git unzip build-essential python3 python3-pip python3-venv \
@@ -15,7 +15,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Stage 2: Runtimes & Docker CLI
 ########################################
 FROM base AS runtimes
-# Instalación de Docker CLI oficial (API 1.44)
 RUN install -m 0755 -d /etc/apt/keyrings && \
     curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg && \
     chmod a+r /etc/apt/keyrings/docker.gpg && \
@@ -38,16 +37,15 @@ COPY . .
 # Instalamos OpenClaw usando BUN
 RUN bun install -g openclaw
 
-# --- FIX DE PERMISOS PARA /data ---
-# Creamos la carpeta de datos y aseguramos que sea escribible
+# Fix de permisos para /data
 RUN mkdir -p /data && chmod -R 777 /data
 
-# Forzamos los enlaces simbólicos
+# Enlaces simbólicos
 RUN ln -sf /root/.bun/bin/openclaw /usr/local/bin/openclaw && \
     ln -sf /root/.bun/bin/openclaw-approve /usr/local/bin/openclaw-approve && \
     chmod +x /app/scripts/*.sh
 
-# Variables de entorno críticas
+# Variables de entorno
 ENV DOCKER_HOST="unix:///var/run/docker.sock"
 ENV DOCKER_API_VERSION="1.44"
 ENV OPENCLAW_DATA_DIR="/data"
@@ -55,5 +53,5 @@ ENV PATH="/root/.bun/bin:/usr/local/bin:/usr/bin:/bin:${PATH}"
 
 EXPOSE 18789
 
-# Comando de arranque: se asegura de que /data sea escribible antes de iniciar
+# Comando de arranque
 CMD ["bash", "-c", "chmod -R 777 /data || true; bash /app/scripts/bootstrap.sh"]
